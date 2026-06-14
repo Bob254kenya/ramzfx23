@@ -8,3 +8,7 @@ export { default as ManualTrading } from './manual-trading';
 export { default as Scanner } from './scanner';
 export { default as Chart } from './chart';
 export { default as Analysistool } from './analysistool';
+// FIX: Added missing ProScanner and SpeedBot exports.
+// Their absence forced main.tsx to skip importing them, causing blank tab renders.
+export { default as ProScanner } from './pro-scanner';
+export { default as SpeedBot } from './speed-bot';
