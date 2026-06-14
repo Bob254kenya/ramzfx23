@@ -49,6 +49,12 @@ import ManualTrading from '../manual-trading';
 import RunStrategy from '../dashboard/run-strategy';
 import Analysistool from '../analysistool';
 import Scanner from '../scanner';
+// FIX: Added missing ProScanner and SpeedBot imports.
+// These were absent, causing <proScanner /> and <speedBot /> to be rendered as
+// unknown HTML elements (lowercase JSX = HTML tag, not a component), resulting
+// in completely blank tab panels for those features.
+import ProScanner from '../pro-scanner';
+import SpeedBot from '../speed-bot';
 import './main.scss';
 
 const AppWrapper = observer(() => {
@@ -85,16 +91,21 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
 const { PRO_SCANNER, BOT_BUILDER, DASHBOARD, AUTO_TRADES, MANUAL_TRADING, SCANNER, SPEED_BOT } = DBOT_TABS;
     const init_render = React.useRef(true);
+    // FIX: hash array was completely misaligned with DBOT_TABS.
+    // Previously hash[0]='pro_scanner' but DBOT_TABS.BEST_BOTS=0, so every URL hash
+    // pointed to the wrong tab (e.g. #auto_trades loaded Bot Builder, #dashboard loaded
+    // Bot Builder, etc.). The array also had 10 entries for 9 tabs.
+    // Now each hash[N] matches the name for DBOT_TABS value N.
     const hash = [
-        'pro_scanner',
-        'best_bots',
-        'dashboard',
-        'bot_builder',
-        'auto_trades',
-        'manual_trading',
-        'scanner',
-        'speed_bot',
-        'analysistool',
+        'best_bots',      // 0 = BEST_BOTS
+        'dashboard',      // 1 = DASHBOARD
+        'bot_builder',    // 2 = BOT_BUILDER
+        'auto_trades',    // 3 = AUTO_TRADES
+        'manual_trading', // 4 = MANUAL_TRADING
+        'scanner',        // 5 = SCANNER
+        'analysistool',   // 6 = ANALYSIS_TOOL
+        'speed_bot',      // 7 = SPEED_BOT
+        'pro_scanner',    // 8 = PRO_SCANNER
     ];
     const show_pro_scanner = isDomainFeatureEnabled('proScanner');
     const show_auto_trades = isDomainFeatureEnabled('autoTrades');
@@ -158,12 +169,15 @@ const { PRO_SCANNER, BOT_BUILDER, DASHBOARD, AUTO_TRADES, MANUAL_TRADING, SCANNE
     };
     const active_hash_tab = GetHashedValue(active_tab);
 
-    // Set up modal state change listener
+    // Set up modal state change listener once on mount.
+    // FIX: Dependency was [is_loading] which re-registered the callback every time
+    // Blockly finished loading. The callback doesn't depend on is_loading — it only
+    // needs to run once. Multiple re-registrations could cause state update races.
     React.useEffect(() => {
         setModalStateChangeCallback(new_state => {
             setTradeTypeModalState(new_state);
         });
-    }, [is_loading]);
+    }, []);
 
     // Reset URL parameter processing when location changes
     React.useEffect(() => {
@@ -428,16 +442,19 @@ const { PRO_SCANNER, BOT_BUILDER, DASHBOARD, AUTO_TRADES, MANUAL_TRADING, SCANNE
         [dashboard, setActiveTab]
     );
 
-    // [AI]
+    // FIX: generateOAuthURL now throws on failure instead of returning "".
+    // Added try/catch so the user gets visible feedback instead of a silent no-op.
     const handleLoginGeneration = async () => {
-        const oauthUrl = await generateOAuthURL();
-        if (oauthUrl) {
+        try {
+            const oauthUrl = await generateOAuthURL();
             window.location.replace(oauthUrl);
-        } else {
-            console.error('Failed to generate OAuth URL');
+        } catch (err) {
+            console.error('Failed to generate OAuth URL:', err);
+            // Show a native alert as a minimal fallback so the user knows something went wrong.
+            // Replace this with a proper toast/notification component if available.
+            alert('Login is temporarily unavailable. Please refresh the page and try again.');
         }
     };
-    // [/AI]
     return (
         <React.Fragment>
             <div className='main'>
@@ -464,7 +481,8 @@ const { PRO_SCANNER, BOT_BUILDER, DASHBOARD, AUTO_TRADES, MANUAL_TRADING, SCANNE
                                     }
                                     id='id-pro-scanner'
                                 >
-                                    <proScanner />
+                                    {/* FIX: Was <proScanner /> — lowercase JSX = HTML element, renders nothing. React components must be PascalCase. */}
+                                    <ProScanner />
                                 </div>
                             )}
                             <div
@@ -541,7 +559,8 @@ const { PRO_SCANNER, BOT_BUILDER, DASHBOARD, AUTO_TRADES, MANUAL_TRADING, SCANNE
                                     }
                                     id='id-speed-bot'
                                 >
-                                    <speedBot />
+                                    {/* FIX: Was <speedBot /> — lowercase JSX = HTML element, renders nothing. React components must be PascalCase. */}
+                                    <SpeedBot />
                                 </div>
                             )}
 {show_manual_trading && (
