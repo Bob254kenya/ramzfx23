@@ -10,16 +10,9 @@ import brandConfig from '../../../../../brand.config.json';
 // support an additional domain — no other code changes required.
 // =============================================================================
 
-interface DomainConfig {
-    clientId: string; // OAuth 2.0 CLIENT_ID (new OAuth app)
-    appId: string; // Legacy Deriv APP_ID for intelligent platform routing
-    redirectUri: string; // MUST match the redirect URL registered in the OAuth app exactly
-    botsFolder: string; // Public folder used by Best Bots XML loading for this domain
-    canonicalHost: string; // Preferred host used for redirects and auth/session consistency
-    includeLegacyAppIdInOAuth: boolean; // Only enable when the legacy app redirects to this domain
-    useLegacyOAuthLogin: boolean; // Use old OAuth app_id login when OAuth2 client setup is not valid yet
-    features: DomainFeatureFlags;
-}
+// FIX: Removed duplicate DomainConfig interface that was declared here without the `ui` field.
+// TypeScript declaration-merges duplicate interfaces, which was fragile and misleading.
+// The single complete declaration now lives below after DomainUIConfig is defined.
 
 type MartingaleMode = 'no_martingale' | 'fixed_loss_trigger' | 'consecutive_loss_trigger';
 
@@ -282,8 +275,9 @@ export const DOMAIN_CONFIG: Record<string, DomainConfig> = {
         primaryDomain: 'dollarsigns.site',
         aliases: ['www.dollarsigns.site'],
         clientId: '33uLmMotAXYx94pf0CLe6',
-        appId: '',
-        redirectUri: 'http://dollarsigns.site/',
+        appId: '', // TODO: add a real Deriv APP_ID for this domain
+        // FIX: Changed http:// to https:// — OAuth providers reject plain HTTP redirect URIs.
+        redirectUri: 'https://dollarsigns.site/',
         botsFolder: 'dollarsigns.site',
         includeLegacyAppIdInOAuth: false,
         features: {
@@ -470,8 +464,9 @@ export const getSocketURL = async (): Promise<string> => {
         // Check PKCE OAuth first (new platform users)
         const authInfo = OAuthTokenExchangeService.getAuthInfo();
         if (authInfo?.access_token) {
-            console.log('[getSocketURL] PKCE user detected - fetching authenticated WebSocket URL');
-            // Use the DerivWSAccountsService to get authenticated WebSocket URL
+            // PKCE user: fetch authenticated WebSocket URL via DerivWSAccountsService
+            // FIX: Removed console.log — auth flow details (login method, token type) should
+            // not be exposed to the browser console in a production financial application.
             const wsUrl = await DerivWSAccountsService.getAuthenticatedWebSocketURL(authInfo.access_token);
             return wsUrl;
         }
@@ -482,7 +477,7 @@ export const getSocketURL = async (): Promise<string> => {
         const pendingApiToken = getPendingApiToken();
         if (pendingApiToken) {
             const legacyWsUrl = getLegacyServerURL();
-            console.log('[getSocketURL] API token login detected - using classic WebSocket URL');
+            // FIX: Removed console.log — use classic WebSocket URL for API token login
             return legacyWsUrl;
         }
 
@@ -492,7 +487,7 @@ export const getSocketURL = async (): Promise<string> => {
                 const active_loginid = localStorage.getItem('active_loginid');
                 if (active_loginid && accountsList[active_loginid]) {
                     const legacyWsUrl = getLegacyServerURL();
-                    console.log('[getSocketURL] Legacy user detected with token - using classic WebSocket URL');
+                    // FIX: Removed console.log — use classic WebSocket URL for legacy users.
                     // For legacy users, DerivAPIBasic must connect to classic `/websockets/v3`.
                     // The newer DerivWS `/trading/v1/options/ws/public` endpoint can open, but
                     // legacy `api.authorize(token)` will not complete there.
@@ -503,8 +498,8 @@ export const getSocketURL = async (): Promise<string> => {
             }
         }
 
-        // No authentication found
-        console.log('[getSocketURL] No authentication found - returning default server URL');
+        // No authentication found — fall back to default server
+        // FIX: Removed console.log that exposed authentication state to browser console
         return getDefaultServerURL();
     } catch (error) {
         console.error('[DerivWS] Error in getSocketURL:', error);
@@ -721,8 +716,15 @@ export const generateOAuthURL = async (prompt?: string, domainConfig = getDomain
             return `${hostname}auth?${params.toString()}`;
         }
     } catch (error) {
-        console.error('Error generating OAuth URL:', error);
+        // FIX: Re-throw instead of swallowing the error and returning "".
+        // Previously callers received "" on failure, logged it to console, and showed
+        // the user nothing — the login button silently did nothing.
+        // Now the error propagates so callers can display user-facing feedback.
+        throw new Error(
+            `Failed to generate OAuth URL: ${error instanceof Error ? error.message : String(error)}`
+        );
     }
 
-    return ``;
+    // This point is only reached if hostname or clientId is missing (config problem).
+    throw new Error('OAuth URL could not be built: missing hostname or clientId in domain config.');
 };
