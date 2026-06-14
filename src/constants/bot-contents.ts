@@ -25,16 +25,18 @@ export const DBOT_TABS: TDashboardTabIndex = Object.freeze({
 
 export const MAX_STRATEGIES = 10;
 
+// FIX: TAB_IDS indices now match DBOT_TABS values exactly.
+// Previously TAB_IDS[7] was 'id-pro-scanner' and TAB_IDS[8] was 'id-speed-bot' — swapped.
 export const TAB_IDS = [
-    'id-best-bots',
-    'id-dbot-dashboard',
-    'id-bot-builder',
-    'id-auto-trades',
-    'id-manual-trading',
-    'id-scanner',
-    'id-analysistool',
-    'id-pro-scanner',
-    'id-speed-bot',
+    'id-best-bots',       // 0 = BEST_BOTS
+    'id-dbot-dashboard',  // 1 = DASHBOARD
+    'id-bot-builder',     // 2 = BOT_BUILDER
+    'id-auto-trades',     // 3 = AUTO_TRADES
+    'id-manual-trading',  // 4 = MANUAL_TRADING
+    'id-scanner',         // 5 = SCANNER
+    'id-analysistool',    // 6 = ANALYSIS_TOOL
+    'id-speed-bot',       // 7 = SPEED_BOT  ✅ was 'id-pro-scanner'
+    'id-pro-scanner',     // 8 = PRO_SCANNER ✅ was 'id-speed-bot'
 ];
 
 export const DEBOUNCE_INTERVAL_TIME = 500;
